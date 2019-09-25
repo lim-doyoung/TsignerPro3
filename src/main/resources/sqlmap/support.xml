@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 1:1 문의하기 -->
+<mapper namespace="com.bit.tsigner.model.SupportDao">
+	
+	<!-- 회원용 리스트 -->
+	<select id="userList"
+		resultType="com.bit.tsigner.model.entity.SupportVo" parameterType="map">
+		set @rownum :=0;
+		select
+		@rownum :=@rownum + 1 as rn,
+		inq_seq,
+		inq_title,
+		regi_date,
+		user_id,
+		user_email,
+		inq_content,
+		inq_type,
+		(select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) as inq_reply_cnt
+
+		from
+		inquiry
+
+		where user_id=#{user_id}
+
+		order by inq_seq desc
+				
+	</select>
+	
+	<!-- 회원 / 관리자 리스트 -->
+	<select id="supportSelectAll" resultType="com.bit.tsigner.model.entity.SupportVo" parameterType="map">
+		set @rownum :=0;
+		
+		select
+			@rownum :=@rownum + 1 as rn,
+			inq_seq,
+			inq_title,
+			regi_date,
+			user_id,
+			user_email,
+			inq_content,
+			inq_type,
+			(select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) as inq_reply_cnt
+		from
+			inquiry
+		<if test='userId != "관리자"'>
+		where
+			user_id = #{userId}
+		</if>
+		order by inq_seq desc
+		
+		limit #{start}, 15
+	</select>
+	
+	
+	<!-- 관리자용 상태별 리스트 -->
+		
+	<select id="replyDone" resultType="com.bit.tsigner.model.entity.SupportVo" parameterType="map">
+		set @rownum :=0;
+		
+		select
+			@rownum :=@rownum + 1 as rn,
+			inq_seq,
+			inq_title,
+			regi_date,
+			user_id,
+			user_email,
+			inq_content,
+			inq_type,
+			(select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) as inq_reply_cnt
+		from
+			inquiry
+		where
+			(select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) > 0
+		
+		order by inq_seq desc
+		
+		limit #{start}, 15
+	</select>
+	
+	<select id="replyUndone" resultType="com.bit.tsigner.model.entity.SupportVo" parameterType="map">
+		set @rownum :=0;
+		
+		select
+			@rownum :=@rownum + 1 as rn,
+			inq_seq,
+			inq_title,
+			regi_date,
+			user_id,
+			user_email,
+			inq_content,
+			inq_type,
+			(select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) as inq_reply_cnt
+		from
+			inquiry
+		where
+			(select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) <![CDATA[<]]> 1
+		
+		order by inq_seq desc
+		
+		limit #{start}, 15
+	</select>
+	
+	<select id="replyDoneCountArticle" resultType="int"
+		parameterType="map">
+
+		SELECT COUNT(*) FROM INQUIRY
+				WHERE (select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) > 0
+</select>
+
+	<select id="replyUndoneCountArticle" resultType="int"
+		parameterType="map">
+
+		SELECT COUNT(*) FROM INQUIRY
+				WHERE (select count(*) from inquiry_reply where inq_seq= inquiry.inq_seq) <![CDATA[<]]> 1
+</select>
+
+
+
+
+
+
+
+	<!-- 상태별 리스트 끝 -->
+
+
+
+
+
+
+	<select id="supportSelectOne" parameterType="java.lang.Integer"
+		resultType="com.bit.tsigner.model.entity.SupportVo">
+		SELECT * FROM INQUIRY WHERE INQ_SEQ=#{idx}
+	</select>
+
+	<select id="supportCountArticle" resultType="int"
+		parameterType="map">
+
+		SELECT COUNT(*) FROM INQUIRY
+		<choose>
+			<when test='id != "관리자"'>
+				WHERE USER_ID = #{id}
+			</when>
+		</choose>
+</select>
+
+	<insert id="supportInsertOne"
+		parameterType="com.bit.tsigner.model.entity.SupportVo">
+		<selectKey resultType="int" order="BEFORE">
+			select max(inq_seq)+1 from
+			inquiry
+		</selectKey>
+		INSERT INTO inquiry
+		(inq_origin_no, inq_group_ord, inq_group_layer,
+		inq_type, inq_title, inq_content,
+		user_id, user_email, regi_date,
+		modi_date, inq_file_path1)
+		VALUES (#{inq_origin_no}, 0, 0, #{inq_type},
+		#{inq_title}, #{inq_content},
+		#{user_id}, #{user_email}, now(), now(),
+		#{inq_file_path1})
+	</insert>
+
+	<update id="supportUpdateOne" parameterType="map">
+		UPDATE inquiry SET
+		INQ_TITLE=#{sub}, INQ_CONTENT=#{content} WHERE INQ_SEQ=#{idx}
+	</update>
+
+	<delete id="supportDeleteOne" parameterType="int">
+		DELETE FROM inquiry
+		WHERE INQ_SEQ=#{idx} and INQ_GROUP_LAYER != 1
+	</delete>
+
+	<update id="replyDeleteUpdate">
+		update inquiry
+		set inq_group_layer = inq_group_layer -
+		1
+		where inq_origin_no = #{inq_origin_no} and inq_group_layer = 1
+	</update>
+
+	<update id="supportDeleteUpdate">
+		update inquiry
+		set inq_title='삭제된 게시글 입니다.'
+		where
+		inq_seq=#{idx} and inq_group_layer = 1
+	</update>
+
+	<update id="supportUpdateGroupLayer"
+		parameterType="com.bit.tsigner.model.entity.SupportVo">
+		update inquiry
+		set inq_group_layer = inq_group_layer + 1
+		where inquiry_origin_no = #{inquiry_origin_no} and inquiry_group_layer
+		= 0
+	</update>
+
+	<update id="supportUpdateGroupOrd"
+		parameterType="com.bit.tsigner.model.entity.SupportVo">
+		update inquiry
+		set inq_group_ord = inq_group_ord + 1
+		where inq_origin_no = #{inq_origin_no} and inq_group_ord >
+		#{inq_group_ord}
+	</update>
+	
+	
+	
+	<!-- 1:1문의하기 답글 -->
+	<!-- 댓글 달기 -->
+	<insert id="supportReplyInsertOne"
+		parameterType="com.bit.tsigner.model.entity.InqReplyVo">
+		INSERT INTO inquiry
+		(inq_origin_no
+		, inq_group_ord
+		,
+		inq_group_layer,
+		inq_title, inq_content, user_id, regi_date, modi_date,
+		inq_file_path1)
+		VALUES (#{inq_origin_no}
+		,#{inq_group_ord}+1
+		,#{inq_group_layer}+2
+		,#{inq_title}, #{inq_content}, #{user_id},
+		now(),now(),#{inq_file_path1})
+	</insert>
+	
+	<!-- 댓글 수정 -->
+	<update id="inqRepUpdate" parameterType="map">
+		UPDATE FAQ SET INQ_CONTENT=#{content} WHERE INQ_SEQ=#{idx}
+	</update>
+
+
+
+
+	<!-- FAQ 자주 묻는 질문 -->
+	<select id="faqSelectAll"
+		resultType="com.bit.tsigner.model.entity.FaqVo">
+		SELECT * FROM FAQ ORDER BY FAQ_SEQ DESC
+	</select>
+	<insert id="faqInsertOne"
+		parameterType="com.bit.tsigner.model.entity.FaqVo">
+		INSERT INTO FAQ(FAQ_TITLE, FAQ_CONTENT, REGI_DATE) VALUES(#{faq_title},
+		#{faq_content}, now())
+	</insert>
+	<select id="faqSelectOne" parameterType="java.lang.Integer" resultType="com.bit.tsigner.model.entity.FaqVo">
+	     SELECT * FROM FAQ WHERE FAQ_SEQ=#{idx}
+	</select>
+	<delete id="faqDeleteOne" parameterType="int">
+		DELETE FROM FAQ WHERE FAQ_SEQ=#{idx}
+	</delete>
+	<update id="faqUpdateOne" parameterType="map">
+		UPDATE FAQ SET FAQ_TITLE=#{sub}, FAQ_CONTENT=#{content} WHERE FAQ_SEQ=#{idx}
+	</update>
+	<!-- 수정-->
+	<select id="repUpdate" parameterType="String" resultType="com.bit.tsigner.model.entity.FaqVo">
+  		SELECT * FROM FAQ WHERE FAQ_SEQ=#{num}
+  	</select>
+	
+</mapper>

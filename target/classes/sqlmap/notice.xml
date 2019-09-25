@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bit.tsigner.model.NoticeDao">
+  <select id="selectAll" resultType="com.bit.tsigner.model.entity.NoticeVo"  parameterType="map">
+  <!-- 목록 조회 및 페이징 전체 쿼리 -->
+        set @rownum :=0;
+        select 
+           @rownum :=@rownum + 1 as rn,
+           noti_seq,
+                  noti_title,
+                      regi_date,
+                      noti_hits,
+                      noti_writer_id,
+                      noti_file_path1,
+                      noti_fix
+                      from notice
+                    
+              <!-- 검색조건 -->
+   
+      <include refid="search"></include>
+      
+      					order by noti_fix desc, noti_seq desc
+              
+                      limit #{start}, 15
+                                  
+ </select>
+  
+   <!--  게시글 레코드 갯수 -->
+   <select id="countArticle" resultType="int" parameterType="map">
+      SELECT COUNT(*) 
+      FROM notice 
+      <!-- WHERE절을 include 태그로 삽입 -->
+      <include refid="search"></include>
+   </select>
+   
+   <!-- sql code 조각 -->
+   <!-- 반복되는 sql의 일부를 sql태그를 이용하여 따로 빼둘수 있다. -->
+   <!-- 검색 조건 sql -->
+   <sql id="search">
+      <choose>
+         <!-- 검색옵션이 전체 검색일 경우 -->
+         <when test="searchOption == 'all'">
+           
+           where
+                noti_writer_id like CONCAT('%',#{keyword},'%')
+	            OR 
+	               noti_content like CONCAT('%',#{keyword},'%')
+	            OR 
+	               noti_title like CONCAT('%',#{keyword},'%') 
+         </when>
+         <!-- 전체 검색이 아닐 경우 -->
+         <otherwise>
+           where
+             ${searchOption} like CONCAT('%',#{keyword},'%')
+         </otherwise>
+      </choose>
+   </sql>
+   
+
+  
+  <insert id="insertOne" parameterType="com.bit.tsigner.model.entity.NoticeVo">
+     INSERT INTO NOTICE (noti_title,noti_content,noti_writer_id,regi_date,modi_date,noti_file_path1,noti_file_path2,noti_fix) VALUES(#{noti_title},#{noti_content}, #{noti_writer_id}, now(),now(),#{noti_file_path1},#{noti_file_path2},#{noti_fix})
+  </insert>
+  
+  <select id="selectOne" parameterType="java.lang.Integer" resultType="com.bit.tsigner.model.entity.NoticeVo">
+     SELECT * FROM NOTICE WHERE NOTI_SEQ=#{idx}
+  </select>
+  
+  <update id="updateOne" parameterType="map">
+     UPDATE NOTICE SET NOTI_TITLE=#{sub}, NOTI_CONTENT=#{content} , noti_file_path1=#{noti_file_path1}, noti_file_path2=#{noti_file_path2}, noti_fix =#{noti_fix}
+      WHERE NOTI_SEQ=#{idx}
+  </update>
+  
+ <!--  <update id="fileUpdateOne" parameterType="com.bit.tsigner.model.entity.NoticeVo">
+     UPDATE NOTICE SET noti_file_path1=#{noti_file_path1}, noti_file_path2=#{noti_file_path2}
+      WHERE NOTI_SEQ=#{idx}
+  </update>		--> 
+  	
+  <delete id="deleteOne" parameterType="int">
+     DELETE FROM NOTICE WHERE NOTI_SEQ=#{idx}
+  </delete>
+  
+  <!-- 게시글 조회수 증가 -->
+  <update id="increaseCnt" parameterType="int">
+     UPDATE NOTICE SET NOTI_HITS = NOTI_HITS+1 WHERE NOTI_SEQ=#{idx}
+  </update>
+  
+  
+  <!-- ******************** 게시글 첨부파일 관련 ********************** -->
+	
+	<!-- 01. 게시물의 첨부파일 목록 -->
+	<select id="getAttach" resultType="String">
+		SELECT fullname FROM tbl_attach WHERE bno = #{bno} ORDER BY regdate
+	</select>
+	
+	<!-- 02. 게시물 첨부파일 추가 -->
+	<insert id="addAttach">
+		<!-- CURRVAL : 현재의 값 -->
+		INSERT INTO tbl_attach (
+			fullname, bno
+		) VALUES (
+			#{fullName}, seq_board.CURRVAL
+		)
+	</insert>
+	
+	<!-- 03. 게시글의 첨부파일 업데이트처리(입력처리) -->
+	<insert id="updateAttach">
+		INSERT INTO tbl_attach (
+			fullname, bno
+		) VALUES (
+			#{fullName}, #{bno}
+		)
+	</insert>
+	
+	<!-- 03. 게시글의 첨부파일 삭제처리 -->
+	<delete id="deleteAttach">
+		DELETE FROM tbl_attach WHERE fullname = #{fullname}
+	</delete>
+	
+	<!-- 게시글의 첨부파일 삭제처리 -->
+	<update id="fileDelete">
+		UPDATE NOTICE SET NOTI_file_path2 = null ,NOTI_file_path1 = null WHERE NOTI_SEQ=#{idx}
+	</update>
+	
+  
+  <!-- event 쿼리 -->
+  
+   <select id="eventSelectAll" resultType="com.bit.tsigner.model.entity.EventVo"  parameterType="map">
+  <!-- 목록 조회 및 페이징 전체 쿼리 -->
+        set @rownum :=0;
+        select 
+           @rownum :=@rownum + 1 as rn,
+           			event_seq,
+           			event_file_path1,
+                  	event_title,
+                      regi_date,
+                      event_hits,
+                      event_writer_id,
+                      event_origin_no,
+                      event_group_ord,
+                      event_group_layer,
+                      event_fix,
+                      <!-- 댓글 숫자 표시 -->
+                    (select count(*) from event_reply where event_seq= event.event_seq) as event_reply_cnt
+                    
+                      from event
+                    
+              <!-- 검색조건 -->
+   
+      <include refid="eventSearch"></include>
+      
+      					order by event_fix desc ,event_origin_no desc, event_group_ord asc
+              
+                      limit #{start}, 15
+                
+ </select>
+  
+   <!--  게시글 레코드 갯수 -->
+   <select id="eventCountArticle" resultType="int" parameterType="map">
+      SELECT COUNT(*) 
+      FROM event
+      <!-- WHERE절을 include 태그로 삽입 -->
+      <include refid="eventSearch"></include>
+   </select>
+   
+   <!-- sql code 조각 -->
+   <!-- 반복되는 sql의 일부를 sql태그를 이용하여 따로 빼둘수 있다. -->
+   <!-- 검색 조건 sql -->
+   <sql id="eventSearch">
+      <choose>
+         <!-- 검색옵션이 전체 검색일 경우 -->
+         <when test="searchOption == 'all'">
+            WHERE 
+            event_writer_id like CONCAT('%',#{keyword},'%')
+            OR 
+               event_content like CONCAT('%',#{keyword},'%')
+            OR 
+               event_title like CONCAT('%',#{keyword},'%')
+         </when>
+         <!-- 전체 검색이 아닐 경우 -->
+         <otherwise>
+            WHERE ${searchOption} like CONCAT('%',#{keyword},'%')
+         </otherwise>
+      </choose>
+   </sql>
+  
+  <!-- 이벤트에 원글이 입력시 -->
+   <insert id="eventInsertOne" parameterType="com.bit.tsigner.model.entity.EventVo">
+   		<selectKey resultType="int" keyProperty="event_origin_no" order="BEFORE">
+   			select max(event_seq)+1 from event
+   		</selectKey>
+       INSERT INTO event 
+       (event_origin_no, event_group_ord, event_group_layer,
+        event_title, event_content, event_writer_id,regi_date,modi_date,event_file_path1 ,event_file_path2
+        , event_reply_cnt,event_fix) 
+       VALUES (#{event_origin_no},0,0,
+       #{event_title},#{event_content}, #{event_writer_id}, now(),now(),#{event_file_path1}, #{event_file_path2} ,#{event_reply_cnt},#{event_fix})
+    
+
+	 
+  </insert>
+  
+  <select id="eventSelectOne" parameterType="java.lang.Integer" resultType="com.bit.tsigner.model.entity.EventVo">
+     SELECT * FROM EVENT WHERE EVENT_SEQ=#{idx}
+  </select>
+  
+  <!-- 게시글 조회수 증가 -->
+  <update id="eventIncreaseCnt" parameterType="int">
+     UPDATE event SET event_HITS = event_HITS+1 WHERE event_SEQ=#{idx}
+  </update>
+  
+  <update id="eventUpdateOne" parameterType="map">
+     UPDATE event SET event_TITLE=#{sub}, event_CONTENT=#{content}, event_file_path1=#{path1}, event_file_path2=#{path2}, event_fix=#{event_fix}
+     				  
+      WHERE event_SEQ=#{idx}
+  </update>
+  
+  <delete id="eventDeleteOne" parameterType="int">
+     DELETE FROM event WHERE event_SEQ=#{idx} and event_group_layer != 1 
+  </delete>
+  
+  <!-- 답글이 삭제 될 때 원글 그룹 레이어 하나 씩 빼주기 -->
+  <update id="replyDeleteUpdate">
+  	update event
+  		set event_group_layer = event_group_layer - 1
+  		where event_origin_no = #{event_origin_no} and event_group_layer = 1
+  </update>
+  
+  
+  <!-- 원글에 답글이 있는데 원글만 삭제 됐을 때, 답글이 있는 원글만 이게 뜸. 답글 없는 원글은 안뜸 -->
+  <update id="eventDeleteUpdate">
+  	update event 
+  		set event_title='삭제된 게시글 입니다.' 
+  		where event_seq=#{idx} and event_group_layer = 1
+  </update>	
+  
+  <!-- 원글에 답글이 하나 추가 되면 답글이 있는 원글에 event_group_layer +1 해주기 -->
+  
+  <update id="eventUpdateGroupLayer" parameterType="com.bit.tsigner.model.entity.EventVo">
+  	update event
+  		set event_group_layer = event_group_layer + 1
+  		where event_origin_no = #{event_origin_no} and event_group_layer = 0
+  </update>
+  
+     <!-- 원글에 답글 여러개 달릴 때 원글번호와 같고, 그룹 순서가 원글 보다 클 때 , 그룹 순서 +1 해주기-->
+  <update id="eventUpdateGroupOrd" parameterType="com.bit.tsigner.model.entity.EventVo">
+  	update event
+  		set event_group_ord = event_group_ord + 1 
+  		where event_origin_no = #{event_origin_no} and event_group_ord > #{event_group_ord}
+  </update>  
+   
+   <!-- 답글 추가 -->
+   <insert id="eventReplyInsertOne" parameterType="com.bit.tsigner.model.entity.EventVo">		   		
+   		   		
+       INSERT INTO event 
+       (event_origin_no
+       , event_group_ord
+       , event_group_layer,
+        event_title, event_content, event_writer_id,regi_date,modi_date,event_file_path1
+        ,event_reply_cnt,event_fix ) 
+       VALUES (#{event_origin_no}
+       			,#{event_group_ord}+1 
+       			,#{event_group_layer}+2
+       			,#{event_title},#{event_content}, #{event_writer_id}, now(),now(),#{event_file_path1},#{event_reply_cnt}, #{event_fix})
+    
+
+  </insert>
+
+ <select id="getWriter" parameterType="int" resultType="String">
+ 	select noti_writer_id from notice where noti_seq =#{idx}
+ </select>
+  
+ <select id="getEventWriter" parameterType="int" resultType="String">
+ 	select event_writer_id from event where event_seq =#{idx}
+ </select>
+ 
+ <!-- LoginVo --> 
+ <select id="getImg" parameterType="String" resultType="com.bit.tsigner.model.entity.LoginVo">
+ 	SELECT * FROM USERS WHERE USER_ID=#{id}
+ </select>
+ 
+ <select id="getReplyWriter" parameterType="String" resultType="com.bit.tsigner.model.entity.LoginVo">
+ 	SELECT * FROM USERS WHERE USER_ID=#{id}
+ </select>
+ <!-- LoginVo 끝 -->
+ 
+<!-- 게시글의 첨부파일 삭제처리 -->
+	<update id="eventFileDelete">
+		UPDATE event SET event_file_path2 = null ,event_file_path1 = null WHERE event_SEQ=#{idx}
+	</update>
+	
+	<!-- 업데이트 -->
+	
+
+   <select id="updateSelectAll" resultType="com.bit.tsigner.model.entity.UpdateVo"  parameterType="map">
+  <!-- 목록 조회 및 페이징 전체 쿼리 -->
+        set @rownum :=0;
+        select 
+           @rownum :=@rownum + 1 as rn,
+           update_seq,
+                  update_title,
+                      regi_date,
+                      update_hits,
+                      update_writer_id,
+                      update_file_path1
+                      from up
+                    
+              <!-- 검색조건 -->
+   
+      <include refid="updateSearch"></include>
+      
+                     order by update_seq desc
+              
+                      limit #{start}, 10
+                                  
+ </select>
+   
+   <!--  게시글 레코드 갯수 -->
+   <select id="updateCountArticle" resultType="int" parameterType="map">
+      SELECT COUNT(*) 
+      FROM up
+      <!-- WHERE절을 include 태그로 삽입 -->
+      <include refid="updateSearch"></include>
+   </select>
+   
+   <sql id="updateSearch">
+      <choose>
+         <!-- 검색옵션이 전체 검색일 경우 -->
+         <when test="searchOption == 'all'">
+           
+           where
+                update_writer_id like CONCAT('%',#{keyword},'%')
+               OR 
+                  update_content like CONCAT('%',#{keyword},'%')
+               OR 
+                  update_title like CONCAT('%',#{keyword},'%') 
+         </when>
+         <!-- 전체 검색이 아닐 경우 -->
+         <otherwise>
+           where
+             ${searchOption} like CONCAT('%',#{keyword},'%')
+         </otherwise>
+      </choose>
+   </sql>
+   
+   <insert id="updateInsertOne" parameterType="com.bit.tsigner.model.entity.UpdateVo">
+     INSERT INTO up (update_title,update_content,update_writer_id,regi_date,modi_date,update_file_path1,update_file_path2) VALUES(#{update_title},#{update_content}, #{update_writer_id}, now(),now(),#{update_file_path1},#{update_file_path2})
+  </insert>
+  
+  <!-- 게시글의 첨부파일 삭제처리 -->
+   <update id="updateFileDelete">
+      UPDATE up SET update_file_path2 = null ,update_file_path1 = null WHERE update_SEQ=#{idx}
+   </update>
+   
+    <select id="updateSelectOne" parameterType="java.lang.Integer" resultType="com.bit.tsigner.model.entity.UpdateVo">
+        SELECT * FROM UP WHERE UPDATE_SEQ=#{idx}
+     </select>
+     
+     <!-- 게시글 조회수 증가 -->
+     <update id="updateIncreaseCnt" parameterType="int">
+        UPDATE up SET update_HITS = update_HITS+1 WHERE update_SEQ=#{idx}
+     </update>
+     
+     <select id="getUpdateWriter" parameterType="int" resultType="String">
+       select update_writer_id from up where update_seq =#{idx}
+    </select>
+    
+    <update id="updateEditOne" parameterType="map">
+        UPDATE up SET update_TITLE=#{sub}, update_CONTENT=#{content} , update_file_path1=#{path1}, update_file_path2=#{path2}
+         WHERE update_SEQ=#{idx}
+     </update>
+   
+   <delete id="updateDeleteOne" parameterType="int">
+        DELETE FROM up WHERE update_SEQ=#{idx}
+     </delete>
+     
+     <!-- 메인 공지 -->
+     <select id="mainNotice" resultType="com.bit.tsigner.model.entity.NoticeVo">
+     	SELECT * FROM NOTICE ORDER BY NOTI_FIX DESC,NOTI_SEQ DESC LIMIT 0,5;
+     </select>
+
+  
+</mapper>

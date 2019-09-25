@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bit.tsigner.model.SearchDao">
+	<select id="TagList" resultType="com.bit.tsigner.model.entity.SearchVo">
+	 select count(*) as tag,keyword from search_keyword where keyword is not null group by keyword order by tag desc
+	</select>
+	<insert id="searchTest" parameterType="com.bit.tsigner.model.entity.SearchVo">
+	 insert into search_keyword(keyword,search_date,search_hits,cmnt_type) values(#{keyword},#{search_date},1,#{cmnt_type});
+	</insert>
+	<delete id="OutofKeyword">
+	 <!-- select keyword,search_date from search_keyword where search_date < (now()-interval 1 month) -->
+	 delete from search_keyword where search_date <![CDATA[ < ]]> (now()-interval 1 month)
+	</delete>
+</mapper>

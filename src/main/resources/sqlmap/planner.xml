@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bit.tsigner.model.PlannerDao">
+
+  	<select id="searchCode" resultType="com.bit.tsigner.model.entity.PlannerVo" parameterType="String">
+    	SELECT * FROM LOCATION_DTL WHERE AREA_CODE=#{val} ORDER BY CAST(IFNULL(SIGUNGU_CODE,"0") AS UNSIGNED) ASC
+  	</select>
+
+	<insert id="insertMgt" parameterType="hashmap">
+		INSERT INTO PLAN_MGT(PLAN_CODE,PLAN_TITLE,USER_ID,TRV_FROM_DATE,TRV_TO_DATE,TOT_DIST,TOT_AMT,TOT_ROOM_CHG,TOT_FOOD_EXP,TOT_TRAN_EXP,REGI_DATE,MODI_DATE) 
+		VALUES(#{plan_code},#{plan_title},#{user_id},#{trv_from_date},#{trv_to_date},#{tot_dist},#{tot_amt},#{tot_room_chg},#{tot_food_exp},#{tot_tran_exp},NOW(),NOW())
+	</insert>
+	
+	<update id="updateMgt" parameterType="hashmap">
+		UPDATE PLAN_MGT SET PLAN_TITLE=#{plan_title},TRV_FROM_DATE=#{trv_from_date},TRV_TO_DATE=#{trv_to_date},TOT_ROOM_CHG=#{tot_room_chg},TOT_FOOD_EXP=#{tot_food_exp},TOT_DIST=#{tot_dist},TOT_AMT=#{tot_amt},TOT_TRAN_EXP=#{tot_tran_exp},MODI_DATE=NOW() WHERE PLAN_CODE=#{plan_code}
+	</update>
+	
+	<insert id="insertMst" parameterType="hashmap">
+		INSERT INTO PLAN_DAY_MST(PLAN_CODE,TRV_DEG,TRV_DATE,DAY_DIST,DAY_AMT,DAY_ROOM_CHG,DAY_FOOD_EXP,DAY_TRAN_EXP,REGI_DATE,MODI_DATE)
+		VALUES(#{plan_code},#{trv_deg},#{trv_date},#{day_dist},#{day_amt},#{day_room_chg},#{day_food_exp},#{day_tran_exp},NOW(),NOW())
+	</insert>
+	
+	<insert id="insertDtl" parameterType="hashmap">
+		INSERT INTO PLAN_DAY_DTL(PLAN_CODE,TRV_DEG,LOC_SEQ,LOC_NAME,LOC_TYPE,LOC_ADDR,LOC_POST_CODE,CONTENT_ID,LOC_TEL,OVERVIEW,POSITION_X,POSITION_Y,LOC_IMG_URL,LOC_BDG,LOC_MEMO,LOC_DISTANCE,REGI_DATE,MODI_DATE)
+		VALUES(#{plan_code},#{trv_deg},#{loc_seq},#{loc_name},#{loc_type},#{loc_addr},#{loc_post_code},#{content_id},#{loc_tel},#{overview},#{position_x},#{position_y},#{loc_img_url},#{loc_bdg},#{loc_memo},#{loc_distance},NOW(),NOW())
+	</insert>	
+	
+	<select id="createCode" resultType="string">
+		SELECT IFNULL(CONCAT('PLAN',DATE_FORMAT(NOW(),'%Y%m'),LPAD(MAX(right(PLAN_CODE,8))+1,8,0)),CONCAT('PLAN',DATE_FORMAT(NOW(),'%Y%m'),'00000001')) FROM PLAN_MGT
+	</select>
+	
+	<delete id="deleteData" parameterType="string">
+			DELETE FROM PLAN_DAY_DTL WHERE PLAN_CODE=#{val};
+			DELETE FROM PLAN_DAY_MST WHERE PLAN_CODE=#{val};
+	</delete>
+	
+	<select id="loadPlanDtl" parameterType="string" resultType="hashmap">
+		SELECT * FROM PLAN_DAY_DTL WHERE PLAN_CODE=#{val} ORDER BY TRV_DEG,LOC_SEQ ASC;
+	</select>
+	
+	<select id="loadPlanMst" parameterType="string" resultType="hashmap">
+		SELECT * FROM PLAN_DAY_MST WHERE PLAN_CODE=#{val};
+	</select>
+	
+	<select id="loadPlanMgt" parameterType="string" resultType="hashmap">
+		SELECT * FROM PLAN_MGT WHERE PLAN_CODE=#{val};
+	</select>
+	
+	<select id="loadHotplace" resultType="hashmap">
+	    SELECT B.LOC_NAME,B.CONTENT_ID,B.LOC_IMG_URL,B.LOC_ADDR FROM (SELECT DISTINCT A.LOC_ADDR,A.LOC_NAME,A.CONTENT_ID,A.LOC_IMG_URL,COUNT(A.LOC_NAME) AS LOC_CNT FROM PLAN_DAY_DTL A WHERE A.LOC_TYPE=12 GROUP BY A.LOC_NAME) B ORDER BY B.LOC_CNT DESC LIMIT 0, 5
+	</select>
+	
+	<select id="loadPurPlanner" resultType="hashmap">
+		SELECT A.CMNT_SEQ,A.CMNT_TITLE,A.CMNT_WRITER_ID,A.CMNT_HITS,A.CMNT_RECOM,A.PLAN_CODE,A.CMNT_FILENAME,DATE_FORMAT(B.TRV_FROM_DATE, '%Y-%m-%d') AS TRV_FROM_DATE,DATE_FORMAT(B.TRV_TO_DATE, '%Y-%m-%d') AS TRV_TO_DATE FROM COMMUNITY A INNER JOIN PLAN_MGT B ON A.PLAN_CODE=B.PLAN_CODE WHERE A.CMNT_TYPE='1' ORDER BY A.CMNT_RECOM DESC,A.CMNT_HITS DESC LIMIT 0,9
+	</select>
+	
+	<select id="loadMyPlanner" resultType="hashmap" parameterType="string">
+		SELECT B.LOC_IMG_URL,A.PLAN_CODE,A.PLAN_TITLE,DATE_FORMAT(A.TRV_FROM_DATE, '%Y-%m-%d') AS TRV_FROM_DATE,DATE_FORMAT(A.TRV_TO_DATE, '%Y-%m-%d') AS TRV_TO_DATE FROM PLAN_MGT A LEFT OUTER JOIN PLAN_DAY_DTL B ON A.PLAN_CODE=B.PLAN_CODE AND B.TRV_DEG=1 AND B.LOC_SEQ=1 WHERE A.USER_ID=#{val} ORDER BY A.REGI_DATE DESC LIMIT 0,9
+	</select>
+	
+	<select id="commLoadPlanDtl" parameterType="string" resultType="hashmap">
+		SELECT B.* FROM COMMUNITY A INNER JOIN PLAN_DAY_DTL B ON A.PLAN_CODE=B.PLAN_CODE WHERE A.CMNT_SEQ=#{val};
+	</select>
+	
+	<select id="commLoadPlanMst" parameterType="string" resultType="hashmap">
+		SELECT B.* FROM COMMUNITY A INNER JOIN PLAN_DAY_MST B ON A.PLAN_CODE=B.PLAN_CODE WHERE A.CMNT_SEQ=#{val};
+	</select>
+	
+	<select id="commLoadPlanMgt" parameterType="string" resultType="hashmap">
+		SELECT B.* FROM COMMUNITY A INNER JOIN PLAN_MGT B ON A.PLAN_CODE=B.PLAN_CODE WHERE A.CMNT_SEQ=#{val};
+	</select>
+	
+  	<select id="loadPlannerList" resultType="hashmap" parameterType="String">
+    	SELECT A.*,B.LOC_IMG_URL FROM PLAN_MGT A LEFT OUTER JOIN PLAN_DAY_DTL B ON A.PLAN_CODE=B.PLAN_CODE AND B.TRV_DEG=1 AND B.LOC_SEQ=1 WHERE A.USER_ID=#{val} ORDER BY A.REGI_DATE DESC
+  	</select>
+  	
+  	<!-- 플래너삭제 -->
+  	<delete id="deletePlanner" parameterType="String">
+  		DELETE FROM PLAN_DAY_DTL WHERE PLAN_CODE=#{val};
+		DELETE FROM PLAN_DAY_MST WHERE PLAN_CODE=#{val};
+  		DELETE FROM PLAN_MGT WHERE PLAN_CODE=#{val};
+  	</delete>
+  	
+  	<!-- 플래너 게시물 등록 -->
+  	<insert id="saveCommPlanner" parameterType="hashmap" useGeneratedKeys="true" keyProperty="testInt">
+  		INSERT INTO COMMUNITY(CMNT_TITLE,CMNT_CONTENT,CMNT_WRITER_ID,CMNT_TYPE,PLAN_CODE,REGI_DATE,MODI_DATE) VALUES(#{cmnt_title},#{cmnt_content},#{cmnt_writer_id},'1',#{plan_code},now(),now())
+  	</insert>
+  	
+  	<select id="maxSeq" resultType="int">
+  		SELECT MAX(CMNT_SEQ) FROM COMMUNITY
+  	</select>
+  	
+  	<select id="commDetail" parameterType="int" resultType="hashmap">
+  		SELECT PLAN_CODE,CMNT_SEQ,CMNT_TITLE,CMNT_CONTENT,CMNT_WRITER_ID,CMNT_TYPE,CMNT_HITS,CMNT_RECOM,CMNT_FILENAME,DATE_FORMAT(REGI_DATE, '%Y-%m-%d') AS REGI_DATE
+  		,DATE_FORMAT(MODI_DATE, '%Y-%m-%d') AS MODI_DATE,(SELECT COUNT(A.CMNT_SEQ) FROM COMMUNITY_REPLY A WHERE A.CMNT_SEQ=#{val}) AS REPLY_TOTAL
+  		,(SELECT COUNT(*) FROM community_like WHERE cmnt_seq=a.CMNT_SEQ) AS likeCnt 
+  		FROM COMMUNITY a WHERE CMNT_SEQ=#{val}
+  	</select>
+  	
+  	<delete id="deleteComm" parameterType="string">
+  		DELETE FROM COMMUNITY WHERE CMNT_SEQ=#{val}
+  	</delete>
+  	
+  	<update id="commPlannerUpdate" parameterType="hashmap">
+  		UPDATE COMMUNITY SET CMNT_TITLE=#{cmnt_title},CMNT_CONTENT=#{cmnt_content},PLAN_CODE=#{plan_code},MODI_DATE=now() WHERE CMNT_SEQ=#{cmnt_seq}
+  	</update>
+  	
+  	<update id="insertFile" parameterType="hashmap">
+  		UPDATE COMMUNITY SET CMNT_FILENAME=#{fileName} WHERE CMNT_SEQ=#{seq}
+  	</update>
+  	
+  	<update id="updateFile" parameterType="hashmap">
+  		UPDATE COMMUNITY SET CMNT_FILENAME=#{fileName} WHERE CMNT_SEQ=#{seq}
+  	</update>
+  	<insert id="plannerReply" parameterType="com.bit.tsigner.model.entity.CommunityVo">
+  		insert into community_reply(cmnt_seq,reply_id,reply_content,r_regi_date,r_modi_date) 
+    	values(#{cmnt_seq},#{reply_id},#{reply_content},#{r_regi_date},#{r_modi_date})
+  	</insert>
+  	
+  	<!-- 마일리지 포인트 -->
+	 <update id="addPoint" parameterType="String">
+    	update user_level_mgt set point=point+30 where user_id=#{val}
+    </update>	 
+    <update id="addRePoint" parameterType="String">
+    	update user_level_mgt set point=point+10 where user_id=#{val}
+    </update>
+    <select id="totalPoint" resultType="int" parameterType="String">
+<!--     select * from users a inner join user_level_mgt b on a.USER_ID=b.USER_ID where a.USER_ID='lian' -->
+    	select point from user_level_mgt where USER_ID=#{val} 
+    </select>
+    <select id="memberLevel" resultType="int" parameterType="String">
+    	select user_mem_lev from users where USER_ID=#{val} 
+    </select>
+    <update id="LevelUp" parameterType="String">
+    	update users set user_mem_lev=user_mem_lev+1 where user_id=#{val}
+    </update>
+<!--     <update id="" parameterType="String">
+    	update users set user_mem_lev=user_mem_lev+1 where user_id=#{val}
+    </update> -->
+</mapper>

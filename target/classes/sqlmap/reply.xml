@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.bit.tsigner.model.ReplyDao">
+  
+  	<!-- 댓글 입력 -->
+  	<insert id="insertReply" parameterType="com.bit.tsigner.model.entity.ReplyVo">
+  		insert into event_reply (event_seq, reply_content,regi_Date , reply_id)
+  		values (#{event_seq}, #{reply_content},now(), #{reply_id})
+  	</insert>
+  	
+  	<!-- 댓글 리스트 -->
+  	<select id="selectReply" resultType="com.bit.tsigner.model.entity.ReplyVo" >
+  		select * from event_reply
+  		where event_seq = #{event_seq}
+  		order by reply_seq
+  	</select>
+  	
+  	<!-- 댓글 삭제 -->
+  	<delete id="delete" parameterType="int" >
+  		delete from event_reply where reply_seq=#{reply_seq}
+  	</delete>
+  	
+  	<!-- 글삭제 할 때 댓글 다 삭제 -->
+  	<delete id="replyDeleteOne">
+  		delete from event_reply where event_seq=#{event_seq}
+  	</delete>
+  	
+  </mapper>

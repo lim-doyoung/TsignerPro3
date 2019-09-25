@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.bit.tsigner.model.InqReplyDao">
+  
+  	<!-- 댓글 입력 -->
+  	<insert id="insertReply" parameterType="com.bit.tsigner.model.entity.InqReplyVo">
+  		insert into inquiry_reply (inq_seq, reply_content, regi_Date, modi_Date, reply_id)
+  		values (#{inq_seq}, #{reply_content}, now(), now(), #{reply_id})
+  	</insert>
+  	
+  	<!-- 댓글 리스트 -->
+  	<select id="selectReply" resultType="com.bit.tsigner.model.entity.InqReplyVo" >
+  		select * from inquiry_reply
+  		where inq_seq = #{inq_seq}
+  		order by reply_seq
+  	</select>
+  	
+  	<!-- 댓글 삭제 -->
+  	<delete id="delete" parameterType="int" >
+  		delete from inquiry_reply where reply_seq=#{reply_seq}
+  	</delete>
+  	
+  	<!-- 댓글 수정 -->
+  	<update id="inqRepUpdate" parameterType="map">
+  		UPDATE INQUIRY_REPLY SET REPLY_CONTENT=#{content} WHERE REPLY_SEQ=#{idx}
+  	</update>
+  	
+  	<!-- 글삭제 할 때 댓글 다 삭제 -->
+  	<delete id="replyDeleteOne">
+  		delete from inquiry_reply where inq_seq=#{inq_seq}
+  	</delete>
+  	
+
+  	
+  </mapper>
